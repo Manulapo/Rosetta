@@ -23,7 +23,7 @@ def get_default_output_dir() -> str:
         Path to default output directory: output/output-DD-MM-YYYY_HH:MM
     """
     today = datetime.now()
-    timestamp = today.strftime("%d-%m-%Y-%H-%M")
+    timestamp = today.strftime("%d/%m/%Y_%H-%M")
     return os.path.join("output", f"output-{timestamp}")
 
 
