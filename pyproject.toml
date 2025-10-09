@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rosetta-cli"
+version = "1.0.0"
+description = "A CLI tool for scanning and managing translations in Vue.js, JavaScript, and TypeScript files"
+readme = "README.md"
+authors = [
+    {name = "Manuel", email = "manuel@example.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+keywords = ["translation", "i18n", "cli", "vue", "javascript", "typescript"]
+dependencies = [
+    "openai>=1.0.0",
+    "pandas>=1.5.0",
+    "openpyxl>=3.0.0",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/manuel/rosetta-cli"
+Repository = "https://github.com/manuel/rosetta-cli"
+Issues = "https://github.com/manuel/rosetta-cli/issues"
+
+[project.scripts]
+rosetta = "src.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md"]
