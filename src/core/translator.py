@@ -137,7 +137,7 @@ def translate_batch_with_openai(
         
         row_data = {
             'Key': key,
-            'EN': english_text
+            'en': english_text
         }
         
         # Translate to each target language

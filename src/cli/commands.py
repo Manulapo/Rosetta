@@ -3,8 +3,10 @@
 import argparse
 import sys
 import os
+import time
+import pandas as pd
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from ..core import (
     scan_folder,
@@ -12,7 +14,10 @@ from ..core import (
     check_openai_api_key,
 )
 from ..utils import create_excel_files_by_prefix
-from ..config import DEFAULT_EXTENSIONS
+from ..utils.excel_utils import create_dictionary_from_excel, capitalize_first_letter
+from ..utils.file_utils import ensure_directory_exists
+from ..core.translator import translate_batch_with_openai, translate_with_openai
+from ..config import DEFAULT_EXTENSIONS, DEFAULT_TARGET_LANGUAGES, TRANSLATIONS_PER_BATCH, DELAY_BETWEEN_BATCHES
 
 
 def get_default_output_dir() -> str:
@@ -41,6 +46,7 @@ def create_parser() -> argparse.ArgumentParser:
     
     parser.add_argument(
         "folder", 
+        nargs='?',  # Make folder optional
         help="Folder path to scan for translation files OR path to a single file"
     )
     
@@ -79,6 +85,11 @@ def create_parser() -> argparse.ArgumentParser:
         "--output-dir",
         default=get_default_output_dir(),
         help="Output directory for Excel files (default: output/output-DD-MM-YYYY-HH-MM)"
+    )
+    
+    parser.add_argument(
+        "--translateFrom",
+        help="Path to an Excel file to translate directly (bypasses folder scanning)"
     )
     
     return parser
@@ -220,6 +231,150 @@ def run_scan_command(
         return 1
 
 
+def translate_batch_with_capitalization(
+    translations_dict: Dict[str, str], 
+    target_languages: List[str] = None
+) -> List[Dict[str, str]]:
+    """
+    Translate all English texts to target languages using OpenAI with capitalized results.
+    
+    Args:
+        translations_dict: Dictionary mapping keys to English text
+        target_languages: List of target language codes
+        
+    Returns:
+        List of dictionaries containing capitalized translations for each language
+    """
+    if target_languages is None:
+        target_languages = DEFAULT_TARGET_LANGUAGES.copy()
+        
+    translated_data = []
+    total_translations = len(translations_dict)
+    
+    # Token usage tracking
+    total_tokens = 0
+    total_prompt_tokens = 0
+    total_completion_tokens = 0
+    
+    print(f"\nStarting OpenAI translation of {total_translations} texts to {len(target_languages)} languages...")
+    print("This may take a few minutes...")
+    
+    for i, (key, english_text) in enumerate(translations_dict.items(), 1):
+        print(f"Translating {i}/{total_translations}: '{key[:50]}{'...' if len(key) > 50 else ''}'")
+        
+        # Ensure English text is capitalized
+        capitalized_english = capitalize_first_letter(english_text)
+        
+        row_data = {
+            'Key': key,
+            'en': capitalized_english
+        }
+        
+        # Translate to each target language
+        for lang in target_languages:
+            print(f"  -> {lang}...", end=' ')
+            translation, token_usage = translate_with_openai(capitalized_english, lang)
+            
+            # Track token usage if available
+            if token_usage:
+                total_tokens += token_usage.total_tokens
+                total_prompt_tokens += token_usage.prompt_tokens
+                total_completion_tokens += token_usage.completion_tokens
+            
+            # Capitalize the translation result
+            row_data[lang] = capitalize_first_letter(translation)
+            print("Done")
+        
+        translated_data.append(row_data)
+        
+        # Small delay to avoid rate limiting
+        if i % TRANSLATIONS_PER_BATCH == 0:
+            print(f"  (Completed {i}/{total_translations} translations)")
+            time.sleep(DELAY_BETWEEN_BATCHES)
+    
+    print(f"\nOpenAI translation complete! Processed {total_translations} texts")
+    print(f"Token usage summary:")
+    print(f"  Total tokens used: {total_tokens:,}")
+    print(f"  Prompt tokens: {total_prompt_tokens:,}")
+    print(f"  Completion tokens: {total_completion_tokens:,}")
+    if total_translations > 0 and len(target_languages) > 0:
+        avg_tokens = total_tokens // (total_translations * len(target_languages))
+        print(f"  Average tokens per translation: {avg_tokens}")
+    
+    return translated_data
+
+
+def run_translate_from_excel_command(
+    excel_path: str,
+    output_dir: str = None
+) -> int:
+    """
+    Execute translation directly from an Excel file.
+    
+    Args:
+        excel_path: Path to the Excel file to translate
+        output_dir: Output directory for the translated file
+        
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    # Use default output directory if none provided
+    if output_dir is None:
+        output_dir = get_default_output_dir()
+    
+    # Validate OpenAI setup
+    if not validate_openai_setup(True):
+        return 1
+    
+    try:
+        # Check if file exists and is Excel
+        if not os.path.isfile(excel_path):
+            print(f"Error: File not found: {excel_path}")
+            return 1
+            
+        if not excel_path.lower().endswith(('.xlsx', '.xls')):
+            print(f"Error: File must be an Excel file (.xlsx or .xls): {excel_path}")
+            return 1
+        
+        print(f"Reading Excel file: {excel_path}")
+        
+        # Read translations from Excel file
+        translations_dict = create_dictionary_from_excel(excel_path)
+        
+        if not translations_dict:
+            print("Error: No valid translations found in Excel file.")
+            print("Make sure the file contains 'Key' and 'en' columns with data.")
+            return 1
+        
+        print(f"Found {len(translations_dict)} translations to process")
+        
+        # Translate using OpenAI with capitalization
+        translated_data = translate_batch_with_capitalization(translations_dict)
+        
+        # Save the translated data to a new Excel file
+        ensure_directory_exists(os.path.join(output_dir, "dummy.txt"))
+        
+        # Create output filename
+        base_name = os.path.splitext(os.path.basename(excel_path))[0]
+        output_filename = f"{base_name}_translated.xlsx"
+        output_filepath = os.path.join(output_dir, output_filename)
+        
+        # Save to Excel
+        df = pd.DataFrame(translated_data)
+        df.to_excel(output_filepath, index=False, engine='openpyxl')
+        
+        print(f"\nTranslation complete!")
+        print(f"Input file: {excel_path}")
+        print(f"Output file: {output_filepath}")
+        print(f"Translations processed: {len(translations_dict)}")
+        
+        return 0
+        
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
+
+
 def main(args: Optional[List[str]] = None) -> int:
     """
     Main CLI entry point.
@@ -233,12 +388,25 @@ def main(args: Optional[List[str]] = None) -> int:
     parser = create_parser()
     parsed_args = parser.parse_args(args)
     
-    return run_scan_command(
-        folder=parsed_args.folder,
-        show_log=parsed_args.log,
-        create_excel=parsed_args.excel,
-        use_translation=parsed_args.translate,
-        preview_mode=parsed_args.preview,
-        extensions=parsed_args.extensions,
-        output_dir=parsed_args.output_dir
-    )
+    # Check if --translateFrom flag is used
+    if parsed_args.translateFrom:
+        # Handle Excel file translation
+        return run_translate_from_excel_command(
+            excel_path=parsed_args.translateFrom,
+            output_dir=parsed_args.output_dir
+        )
+    elif parsed_args.folder:
+        # Handle normal folder scanning
+        return run_scan_command(
+            folder=parsed_args.folder,
+            show_log=parsed_args.log,
+            create_excel=parsed_args.excel,
+            use_translation=parsed_args.translate,
+            preview_mode=parsed_args.preview,
+            extensions=parsed_args.extensions,
+            output_dir=parsed_args.output_dir
+        )
+    else:
+        # Neither folder nor --translateFrom provided
+        parser.error("You must provide either a folder path or use --translateFrom with an Excel file path")
+        return 1

@@ -10,6 +10,24 @@ from ..core.translator import translate_batch_with_openai
 from .file_utils import ensure_directory_exists
 
 
+def capitalize_first_letter(text: str) -> str:
+    """
+    Capitalize the first letter of the text while preserving the rest.
+    
+    Args:
+        text: The text to capitalize
+        
+    Returns:
+        Text with first letter capitalized
+    """
+    if not text or not isinstance(text, str):
+        return text
+    text = text.strip()
+    if len(text) == 0:
+        return text
+    return text[0].upper() + text[1:] if len(text) > 1 else text.upper()
+
+
 def create_excel_files_by_prefix(
     all_translations: List[Tuple[str, str]], 
     output_dir: str = ".", 
@@ -46,11 +64,11 @@ def create_excel_files_by_prefix(
             for key, value in sorted(translations.items()):
                 translated_data.append({
                     'Key': key,
-                    'EN': value,
+                    'en': value,
                     'DK': '',  # Danish - empty
                     'SW': '',  # Swedish - empty  
-                    'ES': '',  # Spanish - empty
-                    'PG': ''   # Portuguese - empty
+                    'es': '',  # Spanish - empty
+                    'pt': ''   # Portuguese - empty
                 })
         
         df = pd.DataFrame(translated_data)
@@ -104,11 +122,11 @@ def create_single_excel_file(
     for key, value in sorted(unique_translations.items()):
         df_data.append({
             'Key': key,
-            'EN': value,
-            'DA': '',  # Danish - empty
+            'en': value,
+            'da': '',  # Danish - empty
             'SW': '',  # Swedish - empty  
-            'ES': '',  # Spanish - empty
-            'PT': ''   # Portuguese - empty
+            'es': '',  # Spanish - empty
+            'pt': ''   # Portuguese - empty
         })
     
     df = pd.DataFrame(df_data)
@@ -120,3 +138,38 @@ def create_single_excel_file(
     df.to_excel(output_path, index=False, engine='openpyxl')
     print(f"\nSuccess: Excel file created: {output_path}")
     print(f"Total unique translations: {len(unique_translations)}")
+
+def create_dictionary_from_excel(
+    excel_path: str
+) -> Dict[str, str]:
+    """
+    Create a dictionary from an Excel file containing translations.
+    
+    Args:
+        excel_path: Path to the Excel file  
+    Returns:
+        Dictionary mapping keys to their English text
+    """
+    if not os.path.isfile(excel_path):
+        print(f"Error: Excel file not found: {excel_path}")
+        return {}
+    
+    try:
+        df = pd.read_excel(excel_path, engine='openpyxl')
+    except Exception as e:
+        print(f"Error reading Excel file: {e}")
+        return {}
+    
+    if 'Key' not in df.columns or 'en' not in df.columns:
+        print("Error: Excel file must contain 'Key' and 'en' columns.")
+        return {}
+    
+    translations_dict = {}
+    for _, row in df.iterrows():
+        key = str(row['Key']).strip()
+        value = str(row['en']).strip()
+        if key and value:
+            # Capitalize the first letter of the English text
+            translations_dict[key] = capitalize_first_letter(value)
+
+    return translations_dict    

@@ -25,11 +25,11 @@ DEFAULT_EXTENSIONS = (".vue", ".js", ".ts")
 LANGUAGE_CODES = {
     'DK': 'Danish',
     'SW': 'Swedish', 
-    'ES': 'Spanish',
-    'PG': 'Portuguese'
+    'es': 'Spanish',
+    'pt': 'Portuguese'
 }
 
-DEFAULT_TARGET_LANGUAGES = ['DK', 'SW', 'ES', 'PG']
+DEFAULT_TARGET_LANGUAGES = ['DK', 'SW', 'es', 'pt']
 
 # OpenAI Translation configuration
 OPENAI_MODEL = "gpt-3.5-turbo"
