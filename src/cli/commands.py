@@ -20,10 +20,10 @@ def get_default_output_dir() -> str:
     Get the default output directory with timestamp.
     
     Returns:
-        Path to default output directory: output/output-DD-MM-YYYY_HH:MM
+        Path to default output directory: output/output-DD-MM-YYYY_HH-MM
     """
     today = datetime.now()
-    timestamp = today.strftime("%d/%m/%Y_%H-%M")
+    timestamp = today.strftime("%d-%m-%Y_%H-%M")
     return os.path.join("output", f"output-{timestamp}")
 
 
@@ -161,8 +161,8 @@ def run_scan_command(
             )
             
             if has_issues and use_translation:
-                print("\n TRANSLATION BLOCKED:")
-                print("   Cannot proceed with AI translation due to detected issues:")
+                print("\nISSUES DETECTED:")
+                print("   Found the following issues in translations:")
                 if len(report_data.get('conflicts', {})) > 0:
                     print(f"   - {len(report_data.get('conflicts', {}))} key conflicts found")
                 if len(report_data.get('exact_redundancy', {})) > 0:
@@ -171,18 +171,35 @@ def run_scan_command(
                     print(f"   - {len(report_data.get('pattern_redundancy', {}))} pattern redundancies found")
                 if len(report_data.get('errors', [])) > 0:
                     print(f"   - {len(report_data.get('errors', []))} scanning errors found")
-                print("\n   Please fix these issues first, then run again with --translate")
-                print("   Creating Excel files without AI translation...")
                 
-                # Create Excel files without AI translation
-                create_excel_files_by_prefix(
-                    all_translations, 
-                    output_dir=output_dir,
-                    use_ai_translation=False
-                )
+                print("\n   These issues may affect translation quality.")
+                while True:
+                    try:
+                        response = input("\nContinue anyway? (y/n): ").strip().lower()
+                        if response in ['', 'y', 'yes']:
+                            print("Proceeding with AI translation...")
+                            create_excel_files_by_prefix(
+                                all_translations, 
+                                output_dir=output_dir,
+                                use_ai_translation=True
+                            )
+                            break
+                        elif response in ['n', 'no']:
+                            print("Process Stopped by user.")
+                            break
+                        else:
+                            print("Please enter 'Y' for yes or 'N' for no.")
+                    except KeyboardInterrupt:
+                        print("\nCancelled. Creating Excel files without AI translation...")
+                        create_excel_files_by_prefix(
+                            all_translations, 
+                            output_dir=output_dir,
+                            use_ai_translation=False
+                        )
+                        break
             elif has_issues:
                 print("\nFound issues in translations. Creating Excel files without AI translation...")
-                print("   Please review and fix conflicts/redundancies manually.")
+                print("Please review and fix conflicts/redundancies manually.")
                 
                 create_excel_files_by_prefix(
                     all_translations, 
@@ -190,7 +207,6 @@ def run_scan_command(
                     use_ai_translation=False
                 )
             else:
-                # No issues found, proceed normally
                 create_excel_files_by_prefix(
                     all_translations, 
                     output_dir=output_dir,
