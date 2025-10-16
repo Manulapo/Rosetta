@@ -110,8 +110,6 @@ def print_preview(all_translations: List[Tuple[str, str]]) -> None:
         for key in sorted(translations.keys()):
             value = translations[key]
             print(MSG.PREFIX_TRANSLATION_ITEM.format(key=key, value=value))
-    
-    print(MSG.HEADER_PREVIEW_END)
 
 def generate_report(
     all_translations: List[Tuple[str, str]], 
