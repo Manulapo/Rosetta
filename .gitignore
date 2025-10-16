@@ -104,8 +104,6 @@ output/
 config.local.py
 secrets.py
 
-# ⚠️ CRITICAL: Never commit these files - they contain API keys and secrets!
-
 # Logs
 *.log
 logs/
@@ -113,3 +111,10 @@ logs/
 # Temporary files
 tmp/
 temp/
+
+# test files
+test_files/
+*.vue
+*.ts
+*.js
+
