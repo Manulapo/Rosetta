@@ -61,17 +61,17 @@ class MSG:
     TRANSLATION_TIME_WARNING = "⏳ This may take a few minutes..."
     
     # === HEADERS ===
-    HEADER_REPORT = "\n=== 📊 ROSETTA SCAN REPORT 📊 ==="
-    HEADER_SUMMARY = "\n📋 SUMMARY:"
-    HEADER_TOKEN_USAGE = "\n📊 Token usage summary:"
+    HEADER_REPORT = "\n📊 ROSETTA SCAN REPORT 📊\n"
+    HEADER_SUMMARY = "\n📋 SUMMARY:\n"
+    HEADER_TOKEN_USAGE = "\n📊 Token usage summary:\n"
     HEADER_CONFLICTS = "\n⚠️ KEY CONFLICTS:"
-    HEADER_EXACT_REDUNDANCY = "\n🔄 EXACT REDUNDANCIES:"
-    HEADER_PATTERN_REDUNDANCY = "\n🔄 PATTERN REDUNDANCIES:"
-    HEADER_ERRORS = "\n❌ ERRORS:"
-    HEADER_PREVIEW = "\n🔍 PREVIEW: All Translation Dictionaries"
-    HEADER_EXCEL_CREATED = "\n📊 Excel files created:"
-    HEADER_FINAL_SUMMARY = "\n📋 Summary:"
-    HEADER_ISSUES_DETECTED = "\n⚠️ ISSUES DETECTED:"
+    HEADER_EXACT_REDUNDANCY = "\n🔄 EXACT REDUNDANCIES:\n"
+    HEADER_PATTERN_REDUNDANCY = "\n🔄 PATTERN REDUNDANCIES:\n"
+    HEADER_ERRORS = "\n❌ ERRORS:\n"
+    HEADER_PREVIEW = "\n🔍 PREVIEW: All Translation Dictionaries\n"
+    HEADER_EXCEL_CREATED = "\n📊 Excel files created:\n"
+    HEADER_FINAL_SUMMARY = "\n📋 Summary:\n"
+    HEADER_ISSUES_DETECTED = "\n⚠️ ISSUES DETECTED:\n"
     
     # === SUMMARY MESSAGES ===
     SUMMARY_FILES_SCANNED = "- Files scanned: {count}"
