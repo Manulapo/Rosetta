@@ -14,6 +14,7 @@ from ..config import (
     TRANSLATIONS_PER_BATCH,
     DELAY_BETWEEN_BATCHES,
 )
+from ..utils.messages import MSG
 
 
 # Initialize OpenAI client with the API key (if available)
@@ -28,17 +29,17 @@ def check_openai_api_key() -> Tuple[bool, str]:
         Tuple of (is_valid, status_message)
     """
     if not OPENAI_API_KEY:
-        return False, "❌ OpenAI API key not found. Please set the OPENAI_API_KEY environment variable."
+        return False, MSG.API_KEY_NOT_FOUND
     
     if OPENAI_API_KEY == "your-api-key-here":
-        return False, "⚠️  Please replace 'your-api-key-here' with your actual OpenAI API key in the script"
+        return False, MSG.API_KEY_PLACEHOLDER
     
     try:
         # Test the API key by making a simple request
         client.models.list()
-        return True, "✅ OpenAI API key is valid and ready"
+        return True, MSG.API_KEY_VALID
     except Exception as e:
-        return False, f"❌ OpenAI API key error: {e}"
+        return False, MSG.API_KEY_INVALID.format(error=e)
 
 
 def translate_with_openai(
@@ -129,11 +130,11 @@ def translate_batch_with_openai(
     total_prompt_tokens = 0
     total_completion_tokens = 0
     
-    print(f"\n🌐 Starting OpenAI translation of {total_translations} texts to {len(target_languages)} languages...")
-    print("⏳ This may take a few minutes...")
+    print(MSG.STARTING_TRANSLATION.format(count=total_translations, langs=len(target_languages)))
+    print(MSG.TRANSLATION_TIME_WARNING)
     
     for i, (key, english_text) in enumerate(translations_dict.items(), 1):
-        print(f"📝 Translating {i}/{total_translations}: '{key[:50]}{'...' if len(key) > 50 else ''}'")
+        print(MSG.TRANSLATING_ITEM.format(current=i, total=total_translations, key=key[:50] + ('...' if len(key) > 50 else '')))
         
         row_data = {
             'key': key,
@@ -142,7 +143,7 @@ def translate_batch_with_openai(
         
         # Translate to each target language
         for lang in target_languages:
-            print(f"  → {lang}...", end=' ')
+            print(MSG.TRANSLATING_TO_LANG.format(lang=lang), end=' ')
             translation, token_usage = translate_with_openai(english_text, lang)
             
             # Track token usage if available
@@ -152,22 +153,22 @@ def translate_batch_with_openai(
                 total_completion_tokens += token_usage.completion_tokens
             
             row_data[lang] = translation
-            print("✓")
+            print(MSG.TRANSLATION_DONE)
         
         translated_data.append(row_data)
         
         # Small delay to avoid rate limiting
         if i % TRANSLATIONS_PER_BATCH == 0:
-            print(f"  ⏸️  (Completed {i}/{total_translations} translations)")
+            print(MSG.BATCH_PAUSE.format(current=i, total=total_translations))
             time.sleep(DELAY_BETWEEN_BATCHES)
     
-    print(f"\n✅ OpenAI translation complete! Processed {total_translations} texts")
-    print(f"\n📊 Token usage summary:")
-    print(f"  • Total tokens used: {total_tokens:,}")
-    print(f"  • Prompt tokens: {total_prompt_tokens:,}")
-    print(f"  • Completion tokens: {total_completion_tokens:,}")
+    print(MSG.OPENAI_TRANSLATION_COMPLETE.format(count=total_translations))
+    print(MSG.HEADER_TOKEN_USAGE)
+    print(MSG.TOKEN_TOTAL.format(count=total_tokens))
+    print(MSG.TOKEN_PROMPT.format(count=total_prompt_tokens))
+    print(MSG.TOKEN_COMPLETION.format(count=total_completion_tokens))
     if total_translations > 0 and len(target_languages) > 0:
         avg_tokens = total_tokens // (total_translations * len(target_languages))
-        print(f"  • Average tokens per translation: {avg_tokens}")
+        print(MSG.TOKEN_AVERAGE.format(count=avg_tokens))
     
     return translated_data

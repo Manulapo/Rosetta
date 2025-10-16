@@ -4,6 +4,8 @@ import re
 from typing import List, Tuple, Dict, Set
 from collections import defaultdict
 
+from ..utils.messages import MSG
+
 
 def normalize_dynamic_value(value: str) -> str:
     """
@@ -95,22 +97,21 @@ def print_preview(all_translations: List[Tuple[str, str]]) -> None:
     """
     prefix_groups = group_translations_by_prefix(all_translations)
     
-    print("\n=== 🔍 PREVIEW: All Translation Dictionaries ===")
-    print(f"📊 Total unique translations found: {sum(len(translations) for translations in prefix_groups.values())}")
-    print(f"📁 Number of prefix groups: {len(prefix_groups)}")
+    print(MSG.HEADER_PREVIEW)
+    print(MSG.SUMMARY_UNIQUE_TRANSLATIONS.format(count=sum(len(translations) for translations in prefix_groups.values())))
+    print(MSG.SUMMARY_PREFIX_GROUPS.format(count=len(prefix_groups)))
     
     # Sort prefixes alphabetically for consistent output
     for prefix in sorted(prefix_groups.keys()):
         translations = prefix_groups[prefix]
-        print(f"\n--- 📂 {prefix.upper()} ({len(translations)} translations) ---")
+        print(MSG.PREFIX_GROUP_HEADER.format(prefix=prefix.upper(), count=len(translations)))
         
         # Sort keys alphabetically within each prefix group
         for key in sorted(translations.keys()):
             value = translations[key]
-            print(f"  '{key}': '{value}'")
+            print(MSG.PREFIX_TRANSLATION_ITEM.format(key=key, value=value))
     
-    print(f"\n=== ✅ END PREVIEW ===")
-
+    print(MSG.HEADER_PREVIEW_END)
 
 def generate_report(
     all_translations: List[Tuple[str, str]], 
@@ -143,20 +144,20 @@ def generate_report(
     pattern_redundancy = analysis['pattern_redundancy']
 
     # Simple report with strategic emojis
-    print("\n=== 📊 ROSETTA SCAN REPORT 📊 ===")
+    print(MSG.HEADER_REPORT)
     
     # Summary section
-    print("\n📋 SUMMARY:")
-    print(f"- Files scanned: {len(file_counts)}")
-    print(f"- Total instances: {total_instances}")
-    print(f"- Key conflicts: {len(conflicts)}")
-    print(f"- Exact redundancies: {len(exact_redundancy)}")
-    print(f"- Pattern redundancies: {len(pattern_redundancy)}")
-    print(f"- Errors: {len(errors)}")
+    print(MSG.HEADER_SUMMARY)
+    print(MSG.SUMMARY_FILES_SCANNED.format(count=len(file_counts)))
+    print(MSG.SUMMARY_TOTAL_INSTANCES.format(count=total_instances))
+    print(MSG.SUMMARY_KEY_CONFLICTS.format(count=len(conflicts)))
+    print(MSG.SUMMARY_EXACT_REDUNDANCIES.format(count=len(exact_redundancy)))
+    print(MSG.SUMMARY_PATTERN_REDUNDANCIES.format(count=len(pattern_redundancy)))
+    print(MSG.SUMMARY_ERRORS.format(count=len(errors)))
 
     # Conflicts section
     if conflicts:
-        print("\n⚠️  KEY CONFLICTS:")
+        print(MSG.HEADER_CONFLICTS)
         for k, vals in conflicts.items():
             print(f"- '{k}':")
             for v in vals:
@@ -164,14 +165,14 @@ def generate_report(
 
     # Exact redundancy section
     if exact_redundancy:
-        print("\n🔄 EXACT REDUNDANCIES:")
+        print(MSG.HEADER_EXACT_REDUNDANCY)
         for v, keys in exact_redundancy.items():
             print(f"- '{v}'")
             print(f"  Keys: {', '.join(sorted(keys))}")
 
     # Pattern redundancy section
     if pattern_redundancy:
-        print("\n🔄 PATTERN REDUNDANCIES:")
+        print(MSG.HEADER_PATTERN_REDUNDANCY)
         for pattern, keys in pattern_redundancy.items():
             if pattern in exact_redundancy:
                 continue
@@ -185,7 +186,7 @@ def generate_report(
 
     # Errors section
     if errors:
-        print("\n❌ ERRORS:")
+        print(MSG.HEADER_ERRORS)
         for err in errors:
             print(f"- {err}")
     

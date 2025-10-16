@@ -4,6 +4,7 @@ import os
 from typing import List, Tuple, Dict
 
 from ..config import TRANSLATION_REGEX, DEFAULT_EXTENSIONS
+from ..utils.messages import MSG
 
 
 def extract_translations_from_file(filepath: str) -> Tuple[List[Tuple[str, str]], List[str]]:
@@ -63,20 +64,20 @@ def scan_folder(
     if os.path.isfile(folder):
         # Single file mode
         if folder.endswith(extensions):
-            print(f"📄 Scanning file: {folder}")
+            print(MSG.SCANNING_FILE.format(path=folder))
             translations, file_errors = extract_translations_from_file(folder)
             file_counts[folder] = len(translations)
             
             if show_log:
-                print(f"🔍 Checking {folder} → {len(translations)} instance(s) found")
+                print(MSG.CHECKING_FILE.format(path=folder, count=len(translations)))
 
             all_translations.extend(translations)
             errors.extend([f"{folder}: {err}" for err in file_errors])
         else:
-            print(f"⚠️  File {folder} does not match extensions: {extensions}")
+            print(MSG.FILE_EXTENSION_MISMATCH.format(path=folder, extensions=extensions))
     else:
         # Directory mode (original behavior)
-        print(f"📁 Scanning folder: {folder} for files with extensions: {extensions}")
+        print(MSG.SCANNING_FOLDER.format(folder=folder, extensions=extensions))
 
         for root, _, files in os.walk(folder):
             for file in files:
@@ -86,7 +87,7 @@ def scan_folder(
                     file_counts[path] = len(translations)
                     
                     if show_log:
-                        print(f"🔍 Checking {path} → {len(translations)} instance(s) found")
+                        print(MSG.CHECKING_FILE.format(path=path, count=len(translations)))
 
                     all_translations.extend(translations)
                     errors.extend([f"{path}: {err}" for err in file_errors])

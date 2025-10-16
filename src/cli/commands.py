@@ -13,7 +13,7 @@ from ..core import (
     generate_report,
     check_openai_api_key,
 )
-from ..utils import create_excel_files_by_prefix
+from ..utils import create_excel_files_by_prefix, MSG
 from ..utils.excel_utils import create_dictionary_from_excel, capitalize_first_letter
 from ..utils.file_utils import ensure_directory_exists
 from ..core.translator import translate_batch_with_openai, translate_with_openai
@@ -111,7 +111,7 @@ def validate_openai_setup(use_translation: bool) -> bool:
         is_ready, status_msg = check_openai_api_key()
         print(status_msg)
         if not is_ready:
-            print("Cannot proceed with translation. Please set your OPENAI_API_KEY environment variable.")
+            print(MSG.CANNOT_PROCEED_TRANSLATION)
             return False
     return True
 
@@ -174,23 +174,23 @@ def run_scan_command(
             )
             
             if has_issues and use_translation:
-                print("\nISSUES DETECTED:")
-                print("   Found the following issues in translations:")
+                print(MSG.HEADER_ISSUES_DETECTED)
+                print(MSG.ISSUES_FOUND_DETAIL)
                 if len(report_data.get('conflicts', {})) > 0:
-                    print(f"   - {len(report_data.get('conflicts', {}))} key conflicts found")
+                    print(MSG.ISSUE_CONFLICTS.format(count=len(report_data.get('conflicts', {}))))
                 if len(report_data.get('exact_redundancy', {})) > 0:
-                    print(f"   - {len(report_data.get('exact_redundancy', {}))} exact redundancies found")
+                    print(MSG.ISSUE_EXACT_REDUNDANCY.format(count=len(report_data.get('exact_redundancy', {}))))
                 if len(report_data.get('pattern_redundancy', {})) > 0:
-                    print(f"   - {len(report_data.get('pattern_redundancy', {}))} pattern redundancies found")
+                    print(MSG.ISSUE_PATTERN_REDUNDANCY.format(count=len(report_data.get('pattern_redundancy', {}))))
                 if len(report_data.get('errors', [])) > 0:
-                    print(f"   - {len(report_data.get('errors', []))} scanning errors found")
+                    print(MSG.ISSUE_SCANNING_ERRORS.format(count=len(report_data.get('errors', []))))
                 
-                print("\n   These issues may affect translation quality.")
+                print(MSG.ISSUES_AFFECT_QUALITY)
                 while True:
                     try:
-                        response = input("\nContinue anyway? (y/n): ").strip().lower()
+                        response = input(MSG.PROMPT_CONTINUE).strip().lower()
                         if response in ['', 'y', 'yes']:
-                            print("Proceeding with AI translation...")
+                            print(MSG.PROCEEDING_WITH_TRANSLATION)
                             create_excel_files_by_prefix(
                                 all_translations, 
                                 output_dir=output_dir,
@@ -198,12 +198,12 @@ def run_scan_command(
                             )
                             break
                         elif response in ['n', 'no']:
-                            print("Process Stopped by user.")
+                            print(MSG.PROCESS_STOPPED)
                             break
                         else:
-                            print("Please enter 'Y' for yes or 'N' for no.")
+                            print(MSG.PROMPT_INVALID_RESPONSE)
                     except KeyboardInterrupt:
-                        print("\nCancelled. Creating Excel files without AI translation...")
+                        print(MSG.CANCELLED_NO_TRANSLATION)
                         create_excel_files_by_prefix(
                             all_translations, 
                             output_dir=output_dir,
@@ -211,8 +211,8 @@ def run_scan_command(
                         )
                         break
             elif has_issues:
-                print("\nFound issues in translations. Creating Excel files without AI translation...")
-                print("Please review and fix conflicts/redundancies manually.")
+                print(MSG.ISSUES_FOUND_NO_TRANSLATION)
+                print(MSG.HINT_FIX_CONFLICTS)
                 
                 create_excel_files_by_prefix(
                     all_translations, 
@@ -229,7 +229,7 @@ def run_scan_command(
         return 0
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(MSG.error(str(e)))
         return 1
 
 
@@ -258,11 +258,11 @@ def translate_batch_with_capitalization(
     total_prompt_tokens = 0
     total_completion_tokens = 0
     
-    print(f"\nStarting OpenAI translation of {total_translations} texts to {len(target_languages)} languages...")
-    print("This may take a few minutes...")
+    print(MSG.STARTING_TRANSLATION.format(count=total_translations, langs=len(target_languages)))
+    print(MSG.TRANSLATION_TIME_WARNING)
     
     for i, (key, english_text) in enumerate(translations_dict.items(), 1):
-        print(f"Translating {i}/{total_translations}: '{key[:50]}{'...' if len(key) > 50 else ''}'")
+        print(MSG.TRANSLATING_ITEM.format(current=i, total=total_translations, key=key[:50] + ('...' if len(key) > 50 else '')))
         
         # Ensure English text is capitalized and key is lowercase
         capitalized_english = capitalize_first_letter(english_text)
@@ -275,7 +275,7 @@ def translate_batch_with_capitalization(
         
         # Translate to each target language
         for lang in target_languages:
-            print(f"  -> {lang}...", end=' ')
+            print(MSG.TRANSLATING_TO_LANG.format(lang=lang), end=' ')
             translation, token_usage = translate_with_openai(capitalized_english, lang)
             
             # Track token usage if available
@@ -286,23 +286,23 @@ def translate_batch_with_capitalization(
             
             # Capitalize the translation result
             row_data[lang] = capitalize_first_letter(translation)
-            print("Done")
+            print(MSG.TRANSLATION_DONE)
         
         translated_data.append(row_data)
         
         # Small delay to avoid rate limiting
         if i % TRANSLATIONS_PER_BATCH == 0:
-            print(f"  (Completed {i}/{total_translations} translations)")
+            print(MSG.BATCH_PAUSE.format(current=i, total=total_translations))
             time.sleep(DELAY_BETWEEN_BATCHES)
     
-    print(f"\nOpenAI translation complete! Processed {total_translations} texts")
-    print(f"Token usage summary:")
-    print(f"  Total tokens used: {total_tokens:,}")
-    print(f"  Prompt tokens: {total_prompt_tokens:,}")
-    print(f"  Completion tokens: {total_completion_tokens:,}")
+    print(MSG.OPENAI_TRANSLATION_COMPLETE.format(count=total_translations))
+    print(MSG.HEADER_TOKEN_USAGE)
+    print(MSG.TOKEN_TOTAL.format(count=total_tokens))
+    print(MSG.TOKEN_PROMPT.format(count=total_prompt_tokens))
+    print(MSG.TOKEN_COMPLETION.format(count=total_completion_tokens))
     if total_translations > 0 and len(target_languages) > 0:
         avg_tokens = total_tokens // (total_translations * len(target_languages))
-        print(f"  Average tokens per translation: {avg_tokens}")
+        print(MSG.TOKEN_AVERAGE.format(count=avg_tokens))
     
     return translated_data
 
@@ -325,31 +325,31 @@ def run_translate_from_excel_command(
     if output_dir is None:
         output_dir = get_default_output_dir()
     
-    # Validate OpenAI setup
-    if not validate_openai_setup(True):
-        return 1
-    
     try:
-        # Check if file exists and is Excel
+        # First, validate the file exists and is Excel (before checking API key)
         if not os.path.isfile(excel_path):
-            print(f"Error: File not found: {excel_path}")
+            print(MSG.FILE_NOT_FOUND.format(path=excel_path))
             return 1
             
         if not excel_path.lower().endswith(('.xlsx', '.xls')):
-            print(f"Error: File must be an Excel file (.xlsx or .xls): {excel_path}")
+            print(MSG.INVALID_EXCEL_FILE.format(path=excel_path))
             return 1
         
-        print(f"Reading Excel file: {excel_path}")
+        # Now validate OpenAI setup (only after file validation passes)
+        if not validate_openai_setup(True):
+            return 1
+        
+        print(MSG.READING_EXCEL.format(path=excel_path))
         
         # Read translations from Excel file
         translations_dict = create_dictionary_from_excel(excel_path)
         
         if not translations_dict:
-            print("Error: No valid translations found in Excel file.")
-            print("Make sure the file contains 'key' and 'en' columns with data.")
+            print(MSG.NO_TRANSLATIONS_FOUND)
+            print(MSG.HINT_EXCEL_COLUMNS)
             return 1
         
-        print(f"Found {len(translations_dict)} translations to process")
+        print(MSG.FOUND_TRANSLATIONS.format(count=len(translations_dict)))
         
         # Translate using OpenAI with capitalization
         translated_data = translate_batch_with_capitalization(translations_dict)
@@ -366,15 +366,15 @@ def run_translate_from_excel_command(
         df = pd.DataFrame(translated_data)
         df.to_excel(output_filepath, index=False, engine='openpyxl')
         
-        print(f"\nTranslation complete!")
-        print(f"Input file: {excel_path}")
-        print(f"Output file: {output_filepath}")
-        print(f"Translations processed: {len(translations_dict)}")
+        print(MSG.TRANSLATION_COMPLETE)
+        print(MSG.OUTPUT_INPUT_FILE.format(path=excel_path))
+        print(MSG.OUTPUT_OUTPUT_FILE.format(path=output_filepath))
+        print(MSG.OUTPUT_TRANSLATIONS_PROCESSED.format(count=len(translations_dict)))
         
         return 0
         
     except Exception as e:
-        print(f"Error: {e}")
+        print(MSG.error(str(e)))
         return 1
 
 
@@ -418,10 +418,7 @@ def main(args: Optional[List[str]] = None) -> int:
     
     # Handle translate command
     elif parsed_args.command == 'translate':
-        # Always validate OpenAI setup for translate command
-        if not validate_openai_setup(True):
-            return 1
-        
+        # File validation and OpenAI setup will be handled inside run_translate_from_excel_command
         return run_translate_from_excel_command(
             excel_path=parsed_args.file,
             output_dir=parsed_args.output_dir

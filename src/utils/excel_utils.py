@@ -8,6 +8,7 @@ import pandas as pd
 from ..core.analyzer import group_translations_by_prefix
 from ..core.translator import translate_batch_with_openai
 from .file_utils import ensure_directory_exists
+from .messages import MSG
 
 
 def capitalize_first_letter(text: str) -> str:
@@ -53,7 +54,7 @@ def create_excel_files_by_prefix(
     
     # Create Excel file for each prefix
     for prefix, translations in prefix_groups.items():
-        print(f"\nCreating Excel file for prefix: '{prefix}' ({len(translations)} translations)")
+        print(MSG.CREATING_EXCEL_PREFIX.format(prefix=prefix, count=len(translations)))
         
         if use_ai_translation:
             # Use OpenAI to translate
@@ -80,22 +81,22 @@ def create_excel_files_by_prefix(
         # Write to Excel
         df.to_excel(filepath, index=False, engine='openpyxl')
         created_files.append((filename, len(translations)))
-        print(f"Created: {filename}")
+        print(MSG.FILE_CREATED.format(filename=filename))
     
     # Print summary
-    print(f"\nExcel files created:")
+    print(MSG.HEADER_EXCEL_CREATED)
     for filename, count in sorted(created_files):
-        print(f"   -> {filename} - {count} translations")
+        print(MSG.OUTPUT_FILE_LIST_ITEM.format(filename=filename, count=count))
     
     total_translations = sum(count for _, count in created_files)
-    print(f"\nSummary:")
-    print(f"   Total unique translations: {total_translations}")
-    print(f"   Total files created: {len(created_files)}")
+    print(MSG.HEADER_FINAL_SUMMARY)
+    print(MSG.SUMMARY_TOTAL_UNIQUE.format(count=total_translations))
+    print(MSG.SUMMARY_FILES_CREATED.format(count=len(created_files)))
     
     if use_ai_translation:
-        print(f"   OpenAI translations: Enabled")
+        print(MSG.SUMMARY_OPENAI_ENABLED)
     else:
-        print(f"   AI translations: Disabled (empty columns)")
+        print(MSG.SUMMARY_AI_DISABLED)
     
     return created_files
 
@@ -136,8 +137,8 @@ def create_single_excel_file(
     
     # Write to Excel
     df.to_excel(output_path, index=False, engine='openpyxl')
-    print(f"\nSuccess: Excel file created: {output_path}")
-    print(f"Total unique translations: {len(unique_translations)}")
+    print(MSG.OUTPUT_EXCEL_FILE.format(path=output_path))
+    print(MSG.SUMMARY_UNIQUE_TRANSLATIONS.format(count=len(unique_translations)))
 
 def create_dictionary_from_excel(
     excel_path: str
@@ -151,17 +152,17 @@ def create_dictionary_from_excel(
         Dictionary mapping keys to their English text
     """
     if not os.path.isfile(excel_path):
-        print(f"Error: Excel file not found: {excel_path}")
+        print(MSG.FILE_NOT_FOUND.format(path=excel_path))
         return {}
     
     try:
         df = pd.read_excel(excel_path, engine='openpyxl')
     except Exception as e:
-        print(f"Error reading Excel file: {e}")
+        print(MSG.EXCEL_READ_ERROR.format(error=e))
         return {}
     
     if 'key' not in df.columns or 'en' not in df.columns:
-        print("Error: Excel file must contain 'key' and 'en' columns.")
+        print(MSG.EXCEL_MISSING_COLUMNS)
         return {}
     
     translations_dict = {}
