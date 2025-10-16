@@ -63,20 +63,20 @@ def scan_folder(
     if os.path.isfile(folder):
         # Single file mode
         if folder.endswith(extensions):
-            print(f"Scanning file: {folder}")
+            print(f"📄 Scanning file: {folder}")
             translations, file_errors = extract_translations_from_file(folder)
             file_counts[folder] = len(translations)
             
             if show_log:
-                print(f"Checking {folder} → {len(translations)} instance(s) found")
+                print(f"🔍 Checking {folder} → {len(translations)} instance(s) found")
 
             all_translations.extend(translations)
             errors.extend([f"{folder}: {err}" for err in file_errors])
         else:
-            print(f"File {folder} does not match extensions: {extensions}")
+            print(f"⚠️  File {folder} does not match extensions: {extensions}")
     else:
         # Directory mode (original behavior)
-        print(f"Scanning folder: {folder} for files with extensions: {extensions}")
+        print(f"📁 Scanning folder: {folder} for files with extensions: {extensions}")
 
         for root, _, files in os.walk(folder):
             for file in files:
@@ -86,7 +86,7 @@ def scan_folder(
                     file_counts[path] = len(translations)
                     
                     if show_log:
-                        print(f"Checking {path} → {len(translations)} instance(s) found")
+                        print(f"🔍 Checking {path} → {len(translations)} instance(s) found")
 
                     all_translations.extend(translations)
                     errors.extend([f"{path}: {err}" for err in file_errors])

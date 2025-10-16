@@ -95,21 +95,21 @@ def print_preview(all_translations: List[Tuple[str, str]]) -> None:
     """
     prefix_groups = group_translations_by_prefix(all_translations)
     
-    print("\n===== PREVIEW: All Translation Dictionaries =====")
-    print(f"Total unique translations found: {sum(len(translations) for translations in prefix_groups.values())}")
-    print(f"Number of prefix groups: {len(prefix_groups)}")
+    print("\n=== 🔍 PREVIEW: All Translation Dictionaries ===")
+    print(f"📊 Total unique translations found: {sum(len(translations) for translations in prefix_groups.values())}")
+    print(f"📁 Number of prefix groups: {len(prefix_groups)}")
     
     # Sort prefixes alphabetically for consistent output
     for prefix in sorted(prefix_groups.keys()):
         translations = prefix_groups[prefix]
-        print(f"\n--- {prefix.upper()} ({len(translations)} translations) ---")
+        print(f"\n--- 📂 {prefix.upper()} ({len(translations)} translations) ---")
         
         # Sort keys alphabetically within each prefix group
         for key in sorted(translations.keys()):
             value = translations[key]
-            print(f"'{key}': '{value}'")
+            print(f"  '{key}': '{value}'")
     
-    print(f"\n===== END PREVIEW =====")
+    print(f"\n=== ✅ END PREVIEW ===")
 
 
 def generate_report(
@@ -142,38 +142,52 @@ def generate_report(
     exact_redundancy = analysis['exact_redundancy']
     pattern_redundancy = analysis['pattern_redundancy']
 
-    print("\n===== Report =====")
-    print(f"Total files scanned: {len(file_counts)}")
-    print(f"Total instances found: {total_instances}")
-    print(f"Key conflicts (same key, different values): {len(conflicts)}")
-    print(f"Exact value redundancy (same static text): {len(exact_redundancy)}")
-    print(f"Pattern redundancy (same dynamic pattern): {len(pattern_redundancy)}")
-    print(f"Errors: {len(errors)}")
-
-    if conflicts:
-        print("\n-- Key Conflicts (same key, different values) --")
-        for k, vals in conflicts.items():
-            print(f"'{k}': {list(vals)}")
-
-    if exact_redundancy:
-        print("\n-- Exact Value Redundancy (different keys, same static text) --")
-        for v, keys in exact_redundancy.items():
-            print(f"'{v}': {list(keys)}")
+    # Simple report with strategic emojis
+    print("\n=== 📊 ROSETTA SCAN REPORT 📊 ===")
     
-    if pattern_redundancy:
-        print("\n-- Pattern Redundancy (different keys, same dynamic pattern) --")
-        for pattern, keys in pattern_redundancy.items():
-            if pattern not in exact_redundancy:  # Don't show if already shown in exact redundancy
-                # Find original values for this pattern
-                original_values = [v for k, v in all_translations if k in keys and normalize_dynamic_value(v) == pattern]
-                print(f"Pattern '{pattern}':")
-                print(f"  Keys: {list(keys)}")
-                print(f"  Original values: {list(set(original_values))}")
+    # Summary section
+    print("\n📋 SUMMARY:")
+    print(f"- Files scanned: {len(file_counts)}")
+    print(f"- Total instances: {total_instances}")
+    print(f"- Key conflicts: {len(conflicts)}")
+    print(f"- Exact redundancies: {len(exact_redundancy)}")
+    print(f"- Pattern redundancies: {len(pattern_redundancy)}")
+    print(f"- Errors: {len(errors)}")
 
+    # Conflicts section
+    if conflicts:
+        print("\n⚠️  KEY CONFLICTS:")
+        for k, vals in conflicts.items():
+            print(f"- '{k}':")
+            for v in vals:
+                print(f"  • '{v}'")
+
+    # Exact redundancy section
+    if exact_redundancy:
+        print("\n🔄 EXACT REDUNDANCIES:")
+        for v, keys in exact_redundancy.items():
+            print(f"- '{v}'")
+            print(f"  Keys: {', '.join(sorted(keys))}")
+
+    # Pattern redundancy section
+    if pattern_redundancy:
+        print("\n🔄 PATTERN REDUNDANCIES:")
+        for pattern, keys in pattern_redundancy.items():
+            if pattern in exact_redundancy:
+                continue
+            print(f"- Pattern: '{pattern}'")
+            print(f"  Keys: {', '.join(sorted(keys))}")
+            original_values = [v for k, v in all_translations if k in keys and normalize_dynamic_value(v) == pattern]
+            if original_values:
+                print("  Values:")
+                for ov in sorted(set(original_values)):
+                    print(f"  • '{ov}'")
+
+    # Errors section
     if errors:
-        print("\n-- Errors --")
+        print("\n❌ ERRORS:")
         for err in errors:
-            print(err)
+            print(f"- {err}")
     
     return {
         'total_instances': total_instances,

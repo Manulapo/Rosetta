@@ -63,10 +63,10 @@ def create_excel_files_by_prefix(
             translated_data = []
             for key, value in sorted(translations.items()):
                 translated_data.append({
-                    'Key': key,
+                    'key': key,
                     'en': value,
-                    'DK': '',  # Danish - empty
-                    'SW': '',  # Swedish - empty  
+                    'dk': '',  # Danish - empty
+                    'sw': '',  # Swedish - empty  
                     'es': '',  # Spanish - empty
                     'pt': ''   # Portuguese - empty
                 })
@@ -121,10 +121,10 @@ def create_single_excel_file(
     df_data = []
     for key, value in sorted(unique_translations.items()):
         df_data.append({
-            'Key': key,
+            'key': key,
             'en': value,
             'da': '',  # Danish - empty
-            'SW': '',  # Swedish - empty  
+            'sw': '',  # Swedish - empty  
             'es': '',  # Spanish - empty
             'pt': ''   # Portuguese - empty
         })
@@ -160,13 +160,13 @@ def create_dictionary_from_excel(
         print(f"Error reading Excel file: {e}")
         return {}
     
-    if 'Key' not in df.columns or 'en' not in df.columns:
-        print("Error: Excel file must contain 'Key' and 'en' columns.")
+    if 'key' not in df.columns or 'en' not in df.columns:
+        print("Error: Excel file must contain 'key' and 'en' columns.")
         return {}
     
     translations_dict = {}
     for _, row in df.iterrows():
-        key = str(row['Key']).strip()
+        key = str(row['key']).strip().lower()  # Convert key to lowercase
         value = str(row['en']).strip()
         if key and value:
             # Capitalize the first letter of the English text

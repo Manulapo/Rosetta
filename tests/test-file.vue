@@ -18,11 +18,5 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'TestComponent',
-  mounted() {
-    console.log(this.$t('test.message', 'Test completed successfully'));
-  }
-}
+<script setup>
 </script>

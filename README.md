@@ -58,63 +58,94 @@ cp .env.example .env
 #### 3. Run Basic Scan
 
 ```bash
-# Scan a project folder
-python main.py /path/to/your/project
+# Scan a project folder (preview mode)
+python -m rosetta scan /path/to/your/project --preview
 
-# Or scan a single file
-python main.py /path/to/your/file.vue
+# Create Excel files for translation
+python -m rosetta scan /path/to/your/project --excel
 ```
 
 ## Usage
 
-### Basic Commands
+### Commands Overview
+
+Rosetta uses **subcommands** for different operations:
+
+- **`scan`** - Analyze code folders for translation instances
+- **`translate`** - Translate existing Excel files using AI
+
+### Scan Command
+
+Use the `scan` command to analyze code folders and extract translations.
 
 ```bash
-# Scan a project folder
-python main.py /path/to/project
+# Basic scanning (preview mode)
+python -m rosetta scan /path/to/project --preview
 
-# Scan a single file
-python main.py /path/to/component.vue
+# Create Excel files for manual translation
+python -m rosetta scan /path/to/project --excel
+
+# Create Excel files with AI translations
+python -m rosetta scan /path/to/project --translate
 
 # Scan with detailed logs
-python main.py /path/to/project --log
+python -m rosetta scan /path/to/project --excel --show-log
 
-# Create Excel files without AI translation
-python main.py /path/to/project --excel
+# Scan specific file types
+python -m rosetta scan /path/to/project --excel --extensions .vue .jsx .tsx
 
-# Create Excel files with AI translation
-python main.py /path/to/project --excel --translate
-
-# Preview translations without creating files
-python main.py /path/to/project --preview
+# Custom output directory
+python -m rosetta scan /path/to/project --excel --output-dir ./my-translations
 ```
 
-### Command Options
+### Translate Command
+
+Use the `translate` command to translate existing Excel files using AI.
+
+```bash
+# Translate an Excel file
+python -m rosetta translate my_translations.xlsx
+
+# Translate with custom output directory
+python -m rosetta translate my_translations.xlsx --output-dir ./translated
+```
+
+### Scan Command Options
 
 | Option | Description |
 |--------|-------------|
-| `folder` | **Required.** Path to the folder to scan OR path to a single file |
-| `--log` | Show detailed file scanning logs |
-| `--excel` | Create Excel files with translations organized by prefix |
-| `--translate` | Use OpenAI to fill translations in other languages |
-| `--preview` | Show all translation dictionaries grouped by prefix |
+| `folder` | **Required.** Path to the folder to scan |
+| `--preview` | Preview mode - show analysis without creating files |
+| `--excel` | Create Excel files for translation (empty columns) |
+| `--translate` | Create Excel files with AI translations (requires OPENAI_API_KEY) |
 | `--extensions` | File extensions to scan (default: .vue .js .ts) |
-| `--output-dir` | Output directory for Excel files (default: output/output-DD-MM-YYYY_HH:MM) |
+| `--output-dir` | Output directory for Excel files (default: output/output-DD-MM-YYYY_HH-MM) |
+| `--show-log` | Show detailed file scanning logs |
+
+### Translate Command Options
+
+| Option | Description |
+|--------|-------------|
+| `file` | **Required.** Path to Excel file to translate |
+| `--output-dir` | Output directory for translated file (default: output/output-DD-MM-YYYY_HH-MM) |
 
 ### Advanced Examples
 
 ```bash
-# Scan a single file with detailed logs
-python main.py ./components/UserProfile.vue --log
+# Preview what would be extracted
+python -m rosetta scan ./src --preview
+
+# Scan a single component directory
+python -m rosetta scan ./components --excel --show-log
 
 # Scan specific file types only
-python main.py /path/to/project --extensions .vue .jsx
+python -m rosetta scan ./src --excel --extensions .vue .jsx
 
-# Output Excel files to specific directory
-python main.py /path/to/project --excel --output-dir ./custom-translations
+# Full analysis with AI translation and detailed logs
+python -m rosetta scan ./src --translate --show-log
 
-# Full analysis with AI translation and detailed logs (uses default timestamped output)
-python main.py /path/to/project --log --excel --translate
+# Translate an existing Excel file
+python -m rosetta translate user_translations.xlsx --output-dir ./final-translations
 ```
 
 ## Translation Patterns
@@ -137,42 +168,29 @@ $t('notification.count', 'You have {count} notifications', {count: 5})
 
 Currently supports automatic translation to:
 
-- 🇩🇰 **Danish (DK)**
-- 🇸🇪 **Swedish (SW)**
-- 🇪🇸 **Spanish (ES)**
-- 🇵🇹 **Portuguese (PG)**
+- 🇩🇰 **Danish (dk)**
+- 🇸🇪 **Swedish (sw)**
+- 🇪🇸 **Spanish (es)**
+- 🇵🇹 **Portuguese (pt)**
 
 *Languages can be configured in `src/config/settings.py`*
 
-## Project Structure
+## Excel File Format
 
-```
-rosetta-cli/
-├── 📄 main.py                    # Main entry point
-├── 📄 rosetta.py                 # Deprecated (backward compatibility)
-├── 📂 src/
-│   ├── 📄 __init__.py
-│   ├── 📂 cli/
-│   │   ├── 📄 __init__.py
-│   │   └── 📄 commands.py        # CLI commands and argument parsing
-│   ├── 📂 core/
-│   │   ├── 📄 __init__.py
-│   │   ├── 📄 scanner.py         # File scanning functionality
-│   │   ├── 📄 analyzer.py        # Translation analysis and conflict detection
-│   │   └── 📄 translator.py      # OpenAI translation functionality
-│   ├── 📂 utils/
-│   │   ├── 📄 __init__.py
-│   │   ├── 📄 file_utils.py      # File utilities
-│   │   └── 📄 excel_utils.py     # Excel file creation
-│   └── 📂 config/
-│       ├── 📄 __init__.py
-│       └── 📄 settings.py        # Configuration and settings
-├── 📂 tests/                     # Test files
-├── 📄 requirements.txt           # Python dependencies
-├── 📄 setup.py                   # Package setup
-├── 📄 pyproject.toml            # Modern Python packaging
-└── 📄 README.md                 # This file
-```
+### Input Format
+When using the `translate` command, your Excel file should have these columns:
+- **`key`** - Translation key (e.g., `app.welcome`, `user.profile`)
+- **`en`** - English text to translate
+
+### Output Format
+Generated Excel files contain these columns:
+- **`key`** - Translation key (lowercase)
+- **`en`** - English text (first letter capitalized)
+- **`dk`** - Danish translation
+- **`sw`** - Swedish translation  
+- **`es`** - Spanish translation
+- **`pt`** - Portuguese translation
+
 
 ## Analysis Reports
 

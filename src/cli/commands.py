@@ -34,62 +34,64 @@ def get_default_output_dir() -> str:
 
 def create_parser() -> argparse.ArgumentParser:
     """
-    Create and configure the argument parser.
+    Create and configure the argument parser with subcommands.
     
     Returns:
         Configured ArgumentParser instance
     """
     parser = argparse.ArgumentParser(
-        description="Rosetta - Scan folder or file for translation instances and analyze conflicts",
+        description="Rosetta - Translation management tool for multi-language applications",
         prog="rosetta"
     )
     
-    parser.add_argument(
-        "folder", 
-        nargs='?',  # Make folder optional
-        help="Folder path to scan for translation files OR path to a single file"
-    )
+    # Create subparsers for different commands
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
-    parser.add_argument(
-        "--log", 
-        action="store_true", 
-        help="Show detailed file scanning logs"
+    # SCAN command - for analyzing code folders
+    scan_parser = subparsers.add_parser('scan', help='Scan code folder for translations')
+    scan_parser.add_argument('folder', help='Path to the folder to scan')
+    scan_parser.add_argument(
+        '--extensions',
+        nargs='+',
+        default=list(DEFAULT_EXTENSIONS),
+        help=f'File extensions to scan (default: {" ".join(DEFAULT_EXTENSIONS)})'
     )
-    
-    parser.add_argument(
-        "--excel", 
-        action="store_true", 
-        help="Create Excel files with translations organized by prefix"
+    scan_parser.add_argument(
+        '--preview',
+        action='store_true',
+        help='Preview mode - show analysis without creating files'
     )
-    
-    parser.add_argument(
-        "--translate", 
-        action="store_true", 
-        help="Use OpenAI to fill translations in other languages (requires OPENAI_API_KEY)"
-    )
-    
-    parser.add_argument(
-        "--preview", 
-        action="store_true", 
-        help="Show all translation dictionaries grouped by prefix"
-    )
-    
-    parser.add_argument(
-        "--extensions",
-        nargs="+",
-        default=DEFAULT_EXTENSIONS,
-        help=f"File extensions to scan (default: {' '.join(DEFAULT_EXTENSIONS)})"
-    )
-    
-    parser.add_argument(
+    scan_parser.add_argument(
         "--output-dir",
-        default=get_default_output_dir(),
-        help="Output directory for Excel files (default: output/output-DD-MM-YYYY-HH-MM)"
+        type=str,
+        help="Output directory for generated files (default: output/output-DD-MM-YYYY_HH-MM)"
+    )
+    scan_parser.add_argument(
+        "--show-log",
+        action="store_true",
+        help="Show detailed processing logs"
     )
     
-    parser.add_argument(
-        "--translateFrom",
-        help="Path to an Excel file to translate directly (bypasses folder scanning)"
+    # Scan output options (mutually exclusive)
+    scan_output = scan_parser.add_mutually_exclusive_group()
+    scan_output.add_argument(
+        '--excel',
+        action='store_true',
+        help='Create Excel files for translation (empty columns)'
+    )
+    scan_output.add_argument(
+        '--translate',
+        action='store_true',
+        help='Create Excel files with AI translations (requires OPENAI_API_KEY)'
+    )
+    
+    # TRANSLATE command - for translating existing Excel files
+    translate_parser = subparsers.add_parser('translate', help='Translate an existing Excel file with AI')
+    translate_parser.add_argument('file', help='Path to Excel file to translate')
+    translate_parser.add_argument(
+        "--output-dir",
+        type=str,
+        help="Output directory for generated files (default: output/output-DD-MM-YYYY_HH-MM)"
     )
     
     return parser
@@ -262,11 +264,12 @@ def translate_batch_with_capitalization(
     for i, (key, english_text) in enumerate(translations_dict.items(), 1):
         print(f"Translating {i}/{total_translations}: '{key[:50]}{'...' if len(key) > 50 else ''}'")
         
-        # Ensure English text is capitalized
+        # Ensure English text is capitalized and key is lowercase
         capitalized_english = capitalize_first_letter(english_text)
+        lowercase_key = key.lower()
         
         row_data = {
-            'Key': key,
+            'key': lowercase_key,
             'en': capitalized_english
         }
         
@@ -343,7 +346,7 @@ def run_translate_from_excel_command(
         
         if not translations_dict:
             print("Error: No valid translations found in Excel file.")
-            print("Make sure the file contains 'Key' and 'en' columns with data.")
+            print("Make sure the file contains 'key' and 'en' columns with data.")
             return 1
         
         print(f"Found {len(translations_dict)} translations to process")
@@ -388,25 +391,42 @@ def main(args: Optional[List[str]] = None) -> int:
     parser = create_parser()
     parsed_args = parser.parse_args(args)
     
-    # Check if --translateFrom flag is used
-    if parsed_args.translateFrom:
-        # Handle Excel file translation
-        return run_translate_from_excel_command(
-            excel_path=parsed_args.translateFrom,
-            output_dir=parsed_args.output_dir
-        )
-    elif parsed_args.folder:
-        # Handle normal folder scanning
+    # If no command specified, show help
+    if not parsed_args.command:
+        parser.print_help()
+        return 1
+    
+    # Set default output directory if not provided
+    if not parsed_args.output_dir:
+        parsed_args.output_dir = get_default_output_dir()
+    
+    # Handle scan command
+    if parsed_args.command == 'scan':
+        # Validate OpenAI setup if translation is requested
+        if parsed_args.translate and not validate_openai_setup(True):
+            return 1
+        
         return run_scan_command(
             folder=parsed_args.folder,
-            show_log=parsed_args.log,
-            create_excel=parsed_args.excel,
+            show_log=parsed_args.show_log,
+            create_excel=parsed_args.excel or parsed_args.translate,
             use_translation=parsed_args.translate,
             preview_mode=parsed_args.preview,
-            extensions=parsed_args.extensions,
+            extensions=tuple(parsed_args.extensions),
             output_dir=parsed_args.output_dir
         )
-    else:
-        # Neither folder nor --translateFrom provided
-        parser.error("You must provide either a folder path or use --translateFrom with an Excel file path")
-        return 1
+    
+    # Handle translate command
+    elif parsed_args.command == 'translate':
+        # Always validate OpenAI setup for translate command
+        if not validate_openai_setup(True):
+            return 1
+        
+        return run_translate_from_excel_command(
+            excel_path=parsed_args.file,
+            output_dir=parsed_args.output_dir
+        )
+    
+    # This shouldn't happen, but just in case
+    parser.print_help()
+    return 1
